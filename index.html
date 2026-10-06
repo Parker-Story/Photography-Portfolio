@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Wildlife Photography</title>
+  <style>
+    :root {
+      --bg: #1b201c;
+      --text: #e9e6dc;
+      --muted: #9aa393;
+      --gap: 10px;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: #eceae1; --text: #1f2620; --muted: #5d675b; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.5;
+    }
+    header { padding: 3rem 1.25rem 1.5rem; max-width: 1400px; margin: 0 auto; }
+    h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 400; letter-spacing: -0.01em; }
+    header p { margin: 0.5rem 0 0; color: var(--muted); max-width: 60ch; }
+
+    #gallery {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1.25rem 3rem;
+      columns: 3 280px;
+      column-gap: var(--gap);
+    }
+    #gallery button {
+      display: block;
+      width: 100%;
+      margin: 0 0 var(--gap);
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: zoom-in;
+      break-inside: avoid;
+    }
+    #gallery img { display: block; width: 100%; height: auto; }
+    #gallery button:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+
+    dialog {
+      width: 100vw; height: 100vh; max-width: none; max-height: none;
+      margin: 0; padding: 0; border: 0;
+      background: rgba(0, 0, 0, 0.94);
+    }
+    dialog::backdrop { background: transparent; }
+    dialog img {
+      position: absolute; inset: 0; margin: auto;
+      max-width: 96vw; max-height: 92vh;
+      object-fit: contain;
+    }
+    dialog .ctl {
+      position: absolute;
+      background: none; border: 0; color: #fff;
+      font-size: 2.5rem; line-height: 1;
+      padding: 1rem; cursor: pointer; opacity: 0.8;
+    }
+    dialog .ctl:hover, dialog .ctl:focus-visible { opacity: 1; }
+    #close { top: 0; right: 0; }
+    #prev { left: 0; top: 50%; transform: translateY(-50%); }
+    #next { right: 0; top: 50%; transform: translateY(-50%); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Wildlife Photography</h1>
+    <p>Photos from my local park.</p>
+  </header>
+
+  <main id="gallery"></main>
+
+  <dialog id="lightbox" aria-label="Photo viewer">
+    <button class="ctl" id="close" aria-label="Close">&times;</button>
+    <button class="ctl" id="prev" aria-label="Previous photo">&#8249;</button>
+    <img id="lb-img" alt="">
+    <button class="ctl" id="next" aria-label="Next photo">&#8250;</button>
+  </dialog>
+
+  <script>
+    const gallery = document.getElementById('gallery');
+    const lightbox = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lb-img');
+    let photos = [];
+    let current = 0;
+
+    function altFor(p) {
+      return 'Wildlife photo ' + p.file.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+    }
+
+    function show(i) {
+      current = (i + photos.length) % photos.length;
+      lbImg.src = 'photos/full/' + photos[current].file;
+      lbImg.alt = altFor(photos[current]);
+    }
+
+    function open(i) {
+      show(i);
+      lightbox.showModal();
+    }
+
+    fetch('photos.json')
+      .then(r => r.json())
+      .then(data => {
+        photos = data;
+        photos.forEach((p, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.setAttribute('aria-label', 'View photo ' + (i + 1));
+          const img = document.createElement('img');
+          img.src = 'photos/thumb/' + p.file;
+          img.width = p.w;
+          img.height = p.h;
+          img.alt = altFor(p);
+          img.loading = 'lazy';
+          btn.appendChild(img);
+          btn.addEventListener('click', () => open(i));
+          gallery.appendChild(btn);
+        });
+      })
+      .catch(() => {
+        gallery.textContent = 'Could not load photos.json. If you opened this file directly, run a local server instead (python3 -m http.server).';
+      });
+
+    document.getElementById('close').addEventListener('click', () => lightbox.close());
+    document.getElementById('prev').addEventListener('click', () => show(current - 1));
+    document.getElementById('next').addEventListener('click', () => show(current + 1));
+    lightbox.addEventListener('click', e => { if (e.target === lightbox) lightbox.close(); });
+    document.addEventListener('keydown', e => {
+      if (!lightbox.open) return;
+      if (e.key === 'ArrowLeft') show(current - 1);
+      if (e.key === 'ArrowRight') show(current + 1);
+    });
+  </script>
+</body>
+</html>

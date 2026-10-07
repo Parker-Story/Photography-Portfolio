@@ -6,34 +6,44 @@
   <meta name="robots" content="noindex">
   <title>Wildlife Photography</title>
   <style>
-    :root { --bg: #1b201c; --text: #e9e6dc; --muted: #9aa393; --gap: 8px; }
+    :root { --bg: #1b201c; --text: #e9e6dc; --muted: #9aa393; --line: #3a423b; --gap: 8px; }
     @media (prefers-color-scheme: light) {
-      :root { --bg: #eceae1; --text: #1f2620; --muted: #5d675b; }
+      :root { --bg: #eceae1; --text: #1f2620; --muted: #5d675b; --line: #c4c2b6; }
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: Georgia, "Times New Roman", serif; line-height: 1.5; }
     a { color: inherit; }
     header, main { max-width: 1400px; margin: 0 auto; padding: 0 1.25rem; }
-    header { padding-top: 3rem; padding-bottom: 1.5rem; }
+    header { padding-top: 3rem; padding-bottom: 1rem; }
     h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 400; letter-spacing: -0.01em; }
     h1 a { text-decoration: none; }
     header p { margin: 0.5rem 0 0; color: var(--muted); }
     main { padding-bottom: 3rem; }
     button:focus-visible, a:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
 
+    nav { display: flex; gap: 1.5rem; margin-top: 1.25rem; }
+    nav a { text-decoration: none; color: var(--muted); padding-bottom: 2px; border-bottom: 2px solid transparent; }
+    nav a[aria-current] { color: var(--text); border-bottom-color: var(--text); }
+
     /* Landing: species grid */
-    .species-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+    .species-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; padding-top: 1rem; }
     .tile { display: block; text-decoration: none; }
     .tile img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
     .tile .name { display: block; margin-top: 0.5rem; font-size: 1.25rem; }
     .tile .meta { display: block; color: var(--muted); font-size: 0.9rem; }
 
-    /* Species page */
-    .back { display: inline-block; margin-bottom: 0.5rem; color: var(--muted); }
+    /* Species page + diary */
+    .back { display: inline-block; margin: 1rem 0 0.5rem; color: var(--muted); }
     h2 { margin: 0 0 1.5rem; font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 400; }
-    .day { margin-bottom: 2.5rem; }
-    h3 { margin: 0 0 0.25rem; font-size: 1.15rem; font-weight: 400; }
-    .note { margin: 0 0 0.75rem; max-width: 65ch; color: var(--muted); white-space: pre-line; }
+    .day { border-top: 1px solid var(--line); padding-top: 1.25rem; margin-top: 2.5rem; }
+    main > div > .day:first-of-type { margin-top: 1.5rem; }
+    .day-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1rem; }
+    h3 { margin: 0; font-size: clamp(1.3rem, 4vw, 1.75rem); font-weight: 400; }
+    .count { color: var(--muted); font-size: 0.9rem; }
+    .loc { margin: 0.1rem 0 0.5rem; color: var(--muted); font-style: italic; }
+    .note { margin: 0 0 0.75rem; max-width: 65ch; white-space: pre-line; }
+    .sp-block { margin-top: 1.5rem; }
+    h4 { margin: 0 0 0.25rem; font-size: 1.15rem; font-weight: 400; }
     .row { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: flex-start; }
     .row button { padding: 0; border: 0; background: none; cursor: zoom-in; min-width: 0; }
     .row img { display: block; width: 100%; height: auto; }
@@ -54,6 +64,10 @@
   <header>
     <h1><a href="#">Wildlife Photography</a></h1>
     <p>Photos and notes from my local park.</p>
+    <nav aria-label="Views">
+      <a href="#" id="nav-species">By species</a>
+      <a href="#dates" id="nav-dates">By date</a>
+    </nav>
   </header>
 
   <main id="app"></main>
@@ -71,6 +85,8 @@
     const lightbox = document.getElementById('lightbox');
     const lbImg = document.getElementById('lb-img');
     const lbCap = document.getElementById('lb-cap');
+    const navSpecies = document.getElementById('nav-species');
+    const navDates = document.getElementById('nav-dates');
     let photos = [], notes = {}, view = [], current = 0;
 
     const title = s => s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -81,6 +97,7 @@
     };
     const LONG = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const SHORT = { year: 'numeric', month: 'short', day: 'numeric' };
+    const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
     const thumb = p => `photos/thumb/${p.species}/${p.file}`;
     const full = p => `photos/full/${p.species}/${p.file}`;
     const el = (tag, props = {}, ...kids) => {
@@ -89,6 +106,46 @@
       e.append(...kids);
       return e;
     };
+
+    // notes.json shape: { "YYYY-MM-DD": { location, note, species: { "slug": "note" } } }
+    const outing = d => notes[d] || {};
+    const speciesNote = (d, s) => (outing(d).species || {})[s];
+
+    // Groups photos by capture date, newest day first; photos within a day in shot order
+    function byDay(ps) {
+      const days = {};
+      ps.forEach(p => (days[day(p)] ||= []).push(p));
+      return Object.keys(days).sort().reverse().map(d => ({
+        d,
+        group: days[d].sort((a, b) => a.taken.localeCompare(b.taken))
+      }));
+    }
+
+    function dayHeader(d, count) {
+      return el('div', { className: 'day-head' },
+        el('h3', { textContent: fmt(d, LONG) }),
+        el('span', { className: 'count', textContent: plural(count, 'photo') }));
+    }
+
+    function textP(className, text) {
+      return el('p', { className, textContent: text });
+    }
+
+    // One justified row of photos; registers each photo in `view` for the lightbox
+    function photoRow(group) {
+      const row = el('div', { className: 'row' });
+      group.forEach(p => {
+        const i = view.push(p) - 1;
+        const r = p.w / p.h;
+        const btn = el('button', { type: 'button' },
+          el('img', { src: thumb(p), width: p.w, height: p.h, alt: `${title(p.species)}, ${day(p)}`, loading: 'lazy' }));
+        btn.style.cssText = `flex:${r} 1 ${Math.round(r * 200)}px;max-width:${Math.round(r * 360)}px`;
+        btn.setAttribute('aria-label', `View ${title(p.species)} photo from ${day(p)}`);
+        btn.addEventListener('click', () => openPhoto(i));
+        row.append(btn);
+      });
+      return row;
+    }
 
     function renderHome() {
       document.title = 'Wildlife Photography';
@@ -102,11 +159,10 @@
 
       const grid = el('div', { className: 'species-grid' });
       list.forEach(({ species, ps }) => {
-        const n = ps.length;
         grid.append(el('a', { href: '#' + species, className: 'tile' },
           el('img', { src: thumb(ps[0]), alt: '', loading: 'lazy' }),
           el('span', { className: 'name', textContent: title(species) }),
-          el('span', { className: 'meta', textContent: `${n} photo${n === 1 ? '' : 's'}, last seen ${fmt(day(ps[0]), SHORT)}` })
+          el('span', { className: 'meta', textContent: `${plural(ps.length, 'photo')}, last seen ${fmt(day(ps[0]), SHORT)}` })
         ));
       });
       app.replaceChildren(grid);
@@ -120,50 +176,70 @@
         return;
       }
       document.title = title(species) + ' | Wildlife Photography';
-      const days = {};
-      ps.forEach(p => (days[day(p)] ||= []).push(p));
-      const dates = Object.keys(days).sort().reverse();
-
       view = [];
       const wrap = el('div', {},
         el('a', { href: '#', className: 'back', textContent: 'All species' }),
         el('h2', { textContent: title(species) }));
 
-      dates.forEach(d => {
-        const group = days[d].sort((a, b) => a.taken.localeCompare(b.taken));
-        const section = el('section', { className: 'day' }, el('h3', { textContent: fmt(d, LONG) }));
-        const note = notes[species] && notes[species][d];
-        if (note) section.append(el('p', { className: 'note', textContent: note }));
+      byDay(ps).forEach(({ d, group }) => {
+        const section = el('section', { className: 'day' }, dayHeader(d, group.length));
+        const loc = outing(d).location;
+        if (loc) section.append(textP('loc', loc));
+        const sn = speciesNote(d, species);
+        if (sn) section.append(textP('note', sn));
+        section.append(photoRow(group));
+        wrap.append(section);
+      });
+      app.replaceChildren(wrap);
+    }
 
-        const row = el('div', { className: 'row' });
-        group.forEach(p => {
-          const i = view.push(p) - 1;
-          const r = p.w / p.h;
-          const btn = el('button', { type: 'button' },
-            el('img', { src: thumb(p), width: p.w, height: p.h, alt: `${title(species)}, ${d}`, loading: 'lazy' }));
-          btn.style.cssText = `flex:${r} 1 ${Math.round(r * 200)}px;max-width:${Math.round(r * 360)}px`;
-          btn.setAttribute('aria-label', `View photo from ${d}`);
-          btn.addEventListener('click', () => openPhoto(i));
-          row.append(btn);
+    function renderDiary() {
+      document.title = 'By date | Wildlife Photography';
+      view = [];
+      const wrap = el('div');
+
+      byDay(photos).forEach(({ d, group }) => {
+        const o = outing(d);
+        const section = el('section', { className: 'day' }, dayHeader(d, group.length));
+        if (o.location) section.append(textP('loc', o.location));
+        if (o.note) section.append(textP('note', o.note));
+
+        const bySpecies = {};
+        group.forEach(p => (bySpecies[p.species] ||= []).push(p));
+        Object.entries(bySpecies).forEach(([s, ps]) => {
+          const block = el('div', { className: 'sp-block' },
+            el('h4', {}, el('a', { href: '#' + s, textContent: title(s) })));
+          const sn = speciesNote(d, s);
+          if (sn) block.append(textP('note', sn));
+          block.append(photoRow(ps));
+          section.append(block);
         });
-        section.append(row);
         wrap.append(section);
       });
       app.replaceChildren(wrap);
     }
 
     function route() {
-      const species = decodeURIComponent(location.hash.slice(1));
-      species ? renderSpecies(species) : renderHome();
+      const h = decodeURIComponent(location.hash.slice(1));
+      navSpecies.removeAttribute('aria-current');
+      navDates.removeAttribute('aria-current');
+      if (h === 'dates') {
+        navDates.setAttribute('aria-current', 'page');
+        renderDiary();
+      } else {
+        navSpecies.setAttribute('aria-current', 'page');
+        h ? renderSpecies(h) : renderHome();
+      }
       window.scrollTo(0, 0);
     }
 
     function show(i) {
       current = (i + view.length) % view.length;
       const p = view[current];
+      const loc = outing(day(p)).location;
       lbImg.src = full(p);
       lbImg.alt = `${title(p.species)}, ${day(p)}`;
-      lbCap.textContent = `${title(p.species)}, ${fmt(day(p), SHORT)}`;
+      lbCap.textContent = `${title(p.species)}, ${fmt(day(p), SHORT)}${loc ? ', ' + loc : ''}`;
     }
     function openPhoto(i) { show(i); lightbox.showModal(); }
 

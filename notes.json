@@ -1,5 +1,15 @@
 {
-  "great-egret": {
-    "2026-10-05": "Great Egret - 10/5/2026 - Black Bayou, Monroe Louisiana"
+  "2026-10-05": {
+    "location": "Black Bayou, Monroe, Louisiana",
+    "note": "Overcast, cool morning. Water was low.",
+    "species": {
+      "great-egret": "Caught a fish."
+    }
+  },
+  "2025-09-04": {
+    "location": "Black Bayou, Monroe, Louisiana",
+    "species": {
+      "alligator": "Chilling with its babies"
+    }
   }
 }

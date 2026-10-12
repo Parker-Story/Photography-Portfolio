@@ -25,7 +25,35 @@
     nav a { text-decoration: none; color: var(--muted); padding-bottom: 2px; border-bottom: 2px solid transparent; }
     nav a[aria-current] { color: var(--text); border-bottom-color: var(--text); }
 
-    /* Landing: species grid */
+    /* Landing page */
+    .home header { display: none; }
+    .home main { max-width: none; padding: 0; }
+    .pic { background: var(--line); overflow: hidden; }
+    .pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .btn { display: inline-block; margin-top: 1.25rem; padding: 0.75rem 1.5rem; border: 1px solid currentColor; text-decoration: none; letter-spacing: 0.04em; }
+    .btn:hover, .btn:focus-visible { background: var(--text); color: var(--bg); }
+
+    .hero { position: relative; display: flex; align-items: flex-end; min-height: 100vh; min-height: 100svh; background: #2a312b; color: #fff; overflow: hidden; }
+    .hero .pic { position: absolute; inset: 0; background: none; }
+    .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0) 60%); }
+    .hero-text { position: relative; z-index: 1; padding: clamp(1.5rem, 5vw, 4rem); }
+    .hero h1 { font-size: clamp(2.5rem, 9vw, 6rem); line-height: 1.05; }
+    .hero-text p { margin: 0.5rem 0 0; font-size: clamp(1.1rem, 3vw, 1.6rem); color: #eee; }
+    .hero .btn:hover, .hero .btn:focus-visible { background: #fff; color: #111; }
+
+    .about { max-width: 1100px; margin: 0 auto; padding: 4rem 1.25rem 5rem; }
+    .about h2 { margin-bottom: 2rem; }
+    .about-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 2.5rem; align-items: start; }
+    .about-text p { max-width: 60ch; margin: 0 0 1rem; }
+    .about-main { aspect-ratio: 4 / 5; }
+    .about-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 3rem; }
+    .about-strip figure { margin: 0; }
+    .about-strip .pic { aspect-ratio: 4 / 3; }
+    .about-strip figcaption { margin-top: 0.4rem; color: var(--muted); font-size: 0.9rem; }
+    .about .btn { margin-top: 3rem; }
+    @media (max-width: 720px) { .about-grid { grid-template-columns: 1fr; } }
+
+    /* Gallery: species grid */
     .species-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; padding-top: 1rem; }
     .tile { display: block; text-decoration: none; }
     .tile img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
@@ -62,10 +90,9 @@
 </head>
 <body>
   <header>
-    <h1><a href="#">Wildlife Photography</a></h1>
-    <p>Photos and notes from my local park.</p>
+    <h1><a href="#">Wildlife Photography</a></h1>    
     <nav aria-label="Views">
-      <a href="#" id="nav-species">By species</a>
+      <a href="#gallery" id="nav-species">By species</a>
       <a href="#dates" id="nav-dates">By date</a>
     </nav>
   </header>
@@ -81,6 +108,26 @@
   </dialog>
 
   <script>
+    // Landing page content. Edit this block; images live in the about/ folder.
+    // Any missing image just shows a plain placeholder block.
+    const ABOUT = {
+      name: 'Parker Story',
+      tagline: 'Aspiring Photographer',
+      heroImage: 'about/portrait.jpg',
+      heading: 'About me',
+      mainImage: 'about/me.jpg',
+      paragraphs: [
+        'Yeah I am trying out photography or whatever. My special interest is in wildlife and nature.',
+        '[Placeholder]',
+        '[Placeholder]'
+      ],
+      photos: [
+        { src: 'about/family.jpg', alt: 'My family', caption: 'My Wife' },
+        { src: 'about/dogs.jpg', alt: 'My dogs', caption: 'My babies' },
+        { src: 'about/outdoors.jpg', alt: 'Out with the camera', caption: 'Wife again XD' }
+      ]
+    };
+
     const app = document.getElementById('app');
     const lightbox = document.getElementById('lightbox');
     const lbImg = document.getElementById('lb-img');
@@ -131,6 +178,15 @@
       return el('p', { className, textContent: text });
     }
 
+    // Image in a placeholder block; if the file is missing, only the block remains
+    function pic(src, alt, className = '', lazy = true) {
+      const wrap = el('div', { className: ('pic ' + className).trim() });
+      const img = el('img', { src, alt, loading: lazy ? 'lazy' : 'eager' });
+      img.addEventListener('error', () => img.remove());
+      wrap.append(img);
+      return wrap;
+    }
+
     // One justified row of photos; registers each photo in `view` for the lightbox
     function photoRow(group) {
       const row = el('div', { className: 'row' });
@@ -147,8 +203,33 @@
       return row;
     }
 
-    function renderHome() {
-      document.title = 'Wildlife Photography';
+    function renderLanding() {
+      document.title = `${ABOUT.name} | Wildlife Photography`;
+      view = [];
+
+      const hero = el('section', { className: 'hero' },
+        pic(ABOUT.heroImage, `Portrait of ${ABOUT.name}`, '', false),
+        el('div', { className: 'hero-text' },
+          el('h1', { textContent: ABOUT.name }),
+          el('p', { textContent: ABOUT.tagline }),
+          el('a', { href: '#gallery', className: 'btn', textContent: 'View Gallery' })));
+
+      const about = el('section', { className: 'about' },
+        el('h2', { textContent: ABOUT.heading }),
+        el('div', { className: 'about-grid' },
+          el('div', { className: 'about-text' }, ...ABOUT.paragraphs.map(t => el('p', { textContent: t }))),
+          pic(ABOUT.mainImage, `${ABOUT.name} with a camera`, 'about-main')),
+        el('div', { className: 'about-strip' },
+          ...ABOUT.photos.map(ph => el('figure', {},
+            pic(ph.src, ph.alt),
+            el('figcaption', { textContent: ph.caption })))),
+        el('a', { href: '#gallery', className: 'btn', textContent: 'View Gallery' }));
+
+      app.replaceChildren(hero, about);
+    }
+
+    function renderGallery() {
+      document.title = 'Gallery | Wildlife Photography';
       view = [];
       const groups = {};
       photos.forEach(p => (groups[p.species] ||= []).push(p));
@@ -171,14 +252,14 @@
     function renderSpecies(species) {
       const ps = photos.filter(p => p.species === species);
       if (!ps.length) {
-        app.replaceChildren(el('a', { href: '#', className: 'back', textContent: 'All species' }),
+        app.replaceChildren(el('a', { href: '#gallery', className: 'back', textContent: 'All species' }),
           el('p', { textContent: 'No photos found for that species.' }));
         return;
       }
       document.title = title(species) + ' | Wildlife Photography';
       view = [];
       const wrap = el('div', {},
-        el('a', { href: '#', className: 'back', textContent: 'All species' }),
+        el('a', { href: '#gallery', className: 'back', textContent: 'All species' }),
         el('h2', { textContent: title(species) }));
 
       byDay(ps).forEach(({ d, group }) => {
@@ -219,16 +300,20 @@
       app.replaceChildren(wrap);
     }
 
+    // Routes: #  landing | #gallery  species grid | #dates  diary | #<species>  species page
     function route() {
       const h = decodeURIComponent(location.hash.slice(1));
+      document.body.classList.toggle('home', h === '');
       navSpecies.removeAttribute('aria-current');
       navDates.removeAttribute('aria-current');
-      if (h === 'dates') {
+      if (h === '') {
+        renderLanding();
+      } else if (h === 'dates') {
         navDates.setAttribute('aria-current', 'page');
         renderDiary();
       } else {
         navSpecies.setAttribute('aria-current', 'page');
-        h ? renderSpecies(h) : renderHome();
+        h === 'gallery' ? renderGallery() : renderSpecies(h);
       }
       window.scrollTo(0, 0);
     }

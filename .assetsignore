@@ -1,9 +1,0 @@
-.git/
-.gitattributes
-.gitignore
-.assetsignore
-wrangler.jsonc
-wrangler.toml
-node_modules
-.wrangler
-resize.ps1

@@ -2,13 +2,16 @@
 #   e.g. originals\great-egret\2026-10-05\IMG_4526.jpg
 # The DATE comes from the folder name (camera clock is ignored).
 # EXIF capture time is only used to order photos within a day.
-# Writes photos\full\<species>\<date>\ and photos\thumb\<species>\<date>\,
-# removes output for photos no longer in originals\, and rebuilds photos.json.
+# Writes public\photos\full\<species>\<date>\ and public\photos\thumb\<species>\<date>\,
+# removes output for photos no longer in originals\, and rebuilds public\photos.json.
 # Skips photos that already have output. Delete a photo's files in
-# photos\full and photos\thumb to regenerate it.
+# public\photos\full and public\photos\thumb to regenerate it.
 # Requires ImageMagick 7 (`magick` on PATH).
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
+
+$out = "public"
+New-Item -ItemType Directory -Force $out | Out-Null
 
 $photos = @()
 $keep = New-Object System.Collections.Generic.HashSet[string]
@@ -27,7 +30,7 @@ foreach ($sp in Get-ChildItem originals -Directory) {
       continue
     }
     $date = $dd.Name
-    New-Item -ItemType Directory -Force "photos/full/$species/$date", "photos/thumb/$species/$date" | Out-Null
+    New-Item -ItemType Directory -Force "$out/photos/full/$species/$date", "$out/photos/thumb/$species/$date" | Out-Null
 
     $files = Get-ChildItem $dd.FullName -File |
       Where-Object { $_.Extension -match '^\.(jpe?g|png)$' } |
@@ -36,8 +39,8 @@ foreach ($sp in Get-ChildItem originals -Directory) {
     foreach ($f in $files) {
       $n = $f.BaseName + ".jpg"
       $rel = "$species/$date/$n"
-      $full = "photos/full/$rel"
-      $thumb = "photos/thumb/$rel"
+      $full = "$out/photos/full/$rel"
+      $thumb = "$out/photos/thumb/$rel"
       [void]$keep.Add($full)
       [void]$keep.Add($thumb)
 
@@ -65,21 +68,21 @@ foreach ($sp in Get-ChildItem originals -Directory) {
 }
 
 # Remove output for photos that were renamed, moved, or deleted
-if (Test-Path photos) {
-  $root = (Resolve-Path photos).Path
-  foreach ($p in Get-ChildItem photos -Recurse -File) {
+if (Test-Path "$out/photos") {
+  $root = (Resolve-Path "$out/photos").Path
+  foreach ($p in Get-ChildItem "$out/photos" -Recurse -File) {
     $rel = $p.FullName.Substring($root.Length + 1) -replace '\\', '/'
-    if (-not $keep.Contains("photos/$rel")) {
+    if (-not $keep.Contains("$out/photos/$rel")) {
       Remove-Item $p.FullName
       Write-Host "Removed stale photos/$rel"
     }
   }
-  Get-ChildItem photos -Recurse -Directory |
+  Get-ChildItem "$out/photos" -Recurse -Directory |
     Sort-Object { $_.FullName.Length } -Descending |
     Where-Object { -not (Get-ChildItem $_.FullName -Force) } |
     Remove-Item
 }
 
 $json = ConvertTo-Json -InputObject @($photos) -Compress
-[System.IO.File]::WriteAllText("$PSScriptRoot/photos.json", $json)
-Write-Host "Wrote photos.json with $($photos.Count) photos"
+[System.IO.File]::WriteAllText("$PSScriptRoot/$out/photos.json", $json)
+Write-Host "Wrote $out/photos.json with $($photos.Count) photos"

@@ -8,7 +8,7 @@
   },
   "2026-10-06": {
     "location": "Black Bayou, Monroe, Louisiana",
-    "note": "Lovely Tuesday. Spent a lot of time playing around with the camera and looking for small things to capture. I saw a women with her husband and she had a very large and fancy camera. I introduced myself and asked her some questions. She was very friendly. I think I made a friend.",
+    "note": "Lovely Tuesday. Spent a lot of time playing around with the camera and looking for small things to capture. I saw a women with her husband and she had a very large and fancy camera. I introduced myself and asked her some questions. She was very friendly.",
     "species": {
       "bee": ""
     }
@@ -35,6 +35,14 @@
     "note": "Beautiful as always.",
     "species": {
       "alligator": "We saw two alligators at Black Bayou today. Chloe got a great video of one essentially jumping out of the water and diving back into catch something. It was pretty crazy!"
+    }
+},
+
+ "2026-11-01": {
+    "location": "Black Bayou, Monroe, Louisiana",
+    "note": "Got to walk Black Bayou with my parents for their first time. We had a great time.",
+    "species": {
+      "eastern-pondhawk": "Shout out to mom for spotting this beautiful dragonfly <3."
     }
 }
 }
